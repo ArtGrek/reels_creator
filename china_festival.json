@@ -1,0 +1,13 @@
+{
+	"width":5,
+	"height":3,
+	"spins_symbols":[1,2,3,4,5,6,7,8,9,10,11,12,13],
+	"bonus_symbols":[11,12,13,14,15],
+	"appearing_symbols":[11,12,13],
+	"bonus_symbol_values":[0.5,1,1.5,2,3,5,6,8,10,"mini","minor","major"],
+	"mysterty_symbol":15,
+	"buy_count":2,
+	"can_skip_reel_collect_after_timeout": true,
+	"skip_collect_timeout_sec":10,
+	"identical_complete": true
+}
