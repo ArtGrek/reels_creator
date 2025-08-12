@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde::ser::{SerializeMap, Serializer};
-use serde_json::Value;
 use ordered_float::NotNan;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, Eq, Hash, PartialEq)]
 pub struct Row {
@@ -55,6 +55,7 @@ pub struct ByMechanic {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, Eq, Hash, PartialEq)]
 pub struct Bonus {
+    pub id: String,
     pub appearances: i64,
     pub inits: i64,
     pub respins: i64,
@@ -109,26 +110,20 @@ pub struct Win {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default, Eq, Hash, PartialEq)]
 pub struct Spins {
+    pub id: String,
     pub count: i64,
     pub bet: Bet,
     pub win: Win,
     pub symbols: Vec<Symbol>,
 }
-#[derive(Clone, Debug, Serialize, Deserialize, Default, Eq, Hash, PartialEq)]
-pub struct Category {
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct Game {
     pub count: i64,
-    pub spins: Spins,
-    pub bonus: Bonus,
+    pub spins: HashMap<String, Spins>,
+    pub bonus: HashMap<String, Bonus>,
     pub boards: Boards,
     pub reels: Vec<Reel>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, Default, Eq, Hash, PartialEq)]
-pub struct Categories {
-    pub count: i64,
-    pub category: Vec<Category>,
-    pub buy_category: Vec<Vec<Category>>,
-    pub settings: Value,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]

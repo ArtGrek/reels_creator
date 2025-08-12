@@ -1,7 +1,7 @@
 use serde_json::Value;
 //use serde::{Deserialize, Serialize};
 //use std::path::Path;
-use std::fs;
+use std::{collections::HashMap, fs};
 //use std::io::{self, Write};
 //use std::collections::HashMap;
 use ordered_float::NotNan;
@@ -10,7 +10,7 @@ mod models;
 mod actions;
 mod storage;
 mod convert;
-use models::{Categories, Multi};
+use models::{Game, Multi};
 use actions::{extract, delete_boards_with_symbols, select_unique_boards, multiply_unique_boards_by_frequency, /*collect_reels, complete_reels, check_reels*/};
 use storage::{load_transactions, save_debug, save_reels, save_rtp,};
 //use convert::{save_fugaso, fugaso_by_amount};
@@ -33,7 +33,8 @@ pub async fn execute(a_game_name: String, a_location: String) {
     let _identical_complete: bool = game_config.get("identical_complete").and_then(|v| v.as_bool()).unwrap_or(true);
     //data
     let transactions: Vec<Value> = load_transactions(a_location.to_owned() + &a_game_name.clone() + "/transactions/");
-    let mut categories: Categories = Categories { count: 0, category: Vec::new(), buy_category: vec![Vec::new(); 2], settings: Default::default() };
+    let mut game: Game = Game { count: 0, spins: HashMap::new(), bonus: HashMap::new(), ..Default::default() };
+    Game { count: 0, category: Vec::new(), buy_category: vec![Vec::new(); 2], settings: Default::default() };
     extract(&transactions, &spins_symbols, &appearing_symbols, &bonus_symbols, &bonus_symbol_values, mysterty_symbol, buy_count, width, height, &mut categories);
     
     //actions
