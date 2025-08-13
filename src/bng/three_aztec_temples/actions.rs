@@ -4,9 +4,9 @@ use std::collections::HashSet;
 use std::collections::BTreeMap;
 use ordered_float::NotNan;
 use indicatif::{ProgressBar, ProgressStyle};
-use crate::bng::three_aztec_temples::models::{Categories, Category, Spins, Bet, Win, ByLine, BySymbol, ByLenght, Boards, UniqueBoardsInstanse, BoardsInstanse, Board, Bonus, ByMechanic, ByBonusLenght, Symbol, Col, Row, Reel, ReelInstanse, Multi};
+use crate::bng::three_aztec_temples::models::{Game, Mode, Spins, Bet, Win, ByLine, BySymbol, ByLenght, Boards, UniqueBoardsInstanse, BoardsInstanse, Board, Bonus, ByMechanic, ByBonusLenght, Symbol, Col, Row, Reel, ReelInstanse, Multi};
 
-pub fn extract(a_transactions: &Vec<Value>, a_spins_symbols: &Vec<i64>, a_appearing_symbols: &Vec<i64>, a_bonus_symbols: &Vec<i64>, a_bonus_symbol_values: &Vec<Multi>, a_mysterty_symbol: i64, a_buy_count: i64, width: usize, height: usize, a_categories: &mut Categories) {
+pub fn extract(a_transactions: &Vec<Value>, a_spins_symbols: &Vec<i64>, a_appearing_symbols: &Vec<i64>, a_bonus_symbols: &Vec<i64>, a_bonus_symbol_values: &Vec<Multi>, a_mysterty_symbol: i64, a_buy_count: i64, width: usize, height: usize, a_game: &mut Game) {
     let pb_main = ProgressBar::new((a_transactions.len()) as u64);
     pb_main.set_prefix("Extracting data from transactions: "); 
     pb_main.set_style(ProgressStyle::default_bar().template("{prefix} [{bar:100.cyan/blue}] {pos}/{len} {msg}").expect("ProgressBar template error"),);

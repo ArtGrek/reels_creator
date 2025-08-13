@@ -115,15 +115,22 @@ pub struct Spins {
     pub bet: Bet,
     pub win: Win,
     pub symbols: Vec<Symbol>,
+    pub reels: Vec<Reel>,
+    pub boards: Boards,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct Mode {
+    pub count: i64,
+    pub spins: HashMap<String, Spins>,
+    pub bonus: HashMap<String, Bonus>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Game {
-    pub count: i64,
-    pub spins: HashMap<String, Spins>,
-    pub bonus: HashMap<String, Bonus>,
-    pub boards: Boards,
-    pub reels: Vec<Reel>,
+    pub base: Mode,
+    pub buy_1: Mode,
+    pub buy_2: Mode,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
