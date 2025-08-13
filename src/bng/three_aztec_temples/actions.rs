@@ -20,11 +20,11 @@ pub fn extract(a_transactions: &Vec<Value>, a_game: &mut Game, a_spins_symbols: 
     let bonus_lenghts = set_default_bonus_lenghts(&combo_symbols, &bonus_symbols, &mystery_symbols, width, height);
     let mechanics = set_default_mechanics(vec![1,2,3], &combo_symbols, &bonus_symbols, &mystery_symbols, &bonus_lenghts);
     for transaction in a_transactions {
-        if transaction.get("out").and_then(|response| response.get("command")).and_then(|command| command.as_str()) == Some("play") {
-            if transaction.get("out").and_then(|response| response.get("status")).and_then(|status| status.get("code")).and_then(|code| code.as_str()) == Some("OK") {
+        if transaction.get("out").and_then(|response| response.get("status")).and_then(|status| status.get("code")).and_then(|code| code.as_str()) == Some("OK") {
+            if transaction.get("out").and_then(|response| response.get("command")).and_then(|command| command.as_str()) == Some("play") {
                 if let Some(context) = transaction.get("out").and_then(|response| response.get("context")) {
                     
-                    if a_categories.category.len() < (category_num+1) as usize {
+                    if a_game.category.len() < (category_num+1) as usize {
                         let mut default_boards: Vec<BoardsInstanse> = vec![];
                         let mut unique_default_boards: Vec<UniqueBoardsInstanse> = vec![];
                         let mut default_reels: Vec<Reel> = vec![];
@@ -45,30 +45,34 @@ pub fn extract(a_transactions: &Vec<Value>, a_game: &mut Game, a_spins_symbols: 
                             boards: Boards { total: default_boards.clone(), filtered: default_boards.clone(), unique: unique_default_boards.clone(), multiplied: default_boards.clone() },
                             reels: default_reels.clone()
                         };
-                        for _i in a_categories.category.len()..(category_num+1) as usize {
-                            a_categories.category.push(default_category.clone());
+                        for _i in a_game.category.len()..(category_num+1) as usize {
+                            a_game.category.push(default_category.clone());
                             for j in 0..a_buy_count as usize {
-                                a_categories.buy_category[j].push(default_category.clone());
+                                a_game.buy_category[j].push(default_category.clone());
                             }
                         }
                     }
 
                     let l_category: &mut Category;
                     //spins
+
+
                     if context.get("current").and_then(|v| v.as_str()) == Some("spins") {
+                        a_game.base.count += 1;
+                        let category_num = context.get("spins").and_then(|spins| spins.get("spin_type")).and_then(|v| v.as_i64()).unwrap_or(0);
                         let l_last_action = context.get("last_action").and_then(|v| v.as_str());
                         let l_selected_mode = context.get("spins").and_then(|spins| spins.get("selected_mode")).and_then(|v| v.as_str());
-                        if l_last_action == Some("spin") {l_category = &mut a_categories.category[category_num as usize];} else if l_last_action == Some("buy_spin") {
-                            if l_selected_mode == Some("1") {l_category = &mut a_categories.buy_category[0][category_num as usize];} 
-                            else if l_selected_mode == Some("2") {l_category = &mut a_categories.buy_category[1][category_num as usize];} 
+                        if l_last_action == Some("spin") {l_category = &mut a_game.base.spins.entry(category_num.to_string());} else if l_last_action == Some("buy_spin") {
+                            if l_selected_mode == Some("1") {l_category = &mut a_game.buy_category[0][category_num as usize];} 
+                            else if l_selected_mode == Some("2") {l_category = &mut a_game.buy_category[1][category_num as usize];} 
                             else {continue;}
                         } else {continue;}
                         {    
                             //pars
                             let round_bet = if l_last_action == Some("spin") {context.get("spins").and_then(|spins| spins.get("round_bet")).and_then(|v| v.as_i64()).unwrap_or_default()}
                             else if l_last_action == Some("buy_spin") {
-                                if l_selected_mode == Some("1") {a_categories.settings.get("buy_bonus_price").and_then(|v| v.as_array()).and_then(|arr| arr.get(0)).and_then(Value::as_i64).unwrap() * a_categories.settings.get("bet_factor").and_then(Value::as_array).and_then(|arr| arr.get(0)).and_then(Value::as_i64).unwrap_or(1)}
-                                else if l_selected_mode == Some("2") {a_categories.settings.get("buy_bonus_price").and_then(|v| v.as_array()).and_then(|arr| arr.get(1)).and_then(Value::as_i64).unwrap() * a_categories.settings.get("bet_factor").and_then(Value::as_array).and_then(|arr| arr.get(0)).and_then(Value::as_i64).unwrap_or(1)}
+                                if l_selected_mode == Some("1") {a_game.settings.get("buy_bonus_price").and_then(|v| v.as_array()).and_then(|arr| arr.get(0)).and_then(Value::as_i64).unwrap() * a_game.settings.get("bet_factor").and_then(Value::as_array).and_then(|arr| arr.get(0)).and_then(Value::as_i64).unwrap_or(1)}
+                                else if l_selected_mode == Some("2") {a_game.settings.get("buy_bonus_price").and_then(|v| v.as_array()).and_then(|arr| arr.get(1)).and_then(Value::as_i64).unwrap() * a_game.settings.get("bet_factor").and_then(Value::as_array).and_then(|arr| arr.get(0)).and_then(Value::as_i64).unwrap_or(1)}
                                 else {0}
                             } else {0};
                             let round_win = context.get("spins").and_then(|spins| spins.get("round_win")).and_then(|v| v.as_i64()).unwrap_or_default();
@@ -176,15 +180,14 @@ pub fn extract(a_transactions: &Vec<Value>, a_game: &mut Game, a_spins_symbols: 
                             }
                             
                         } 
-                    }
-                    //bonus
-                    else if context.get("current").and_then(|v| v.as_str()) == Some("bonus") {
+                    } else if context.get("current").and_then(|v| v.as_str()) == Some("bonus") {
+                        /*
                         let category_num = context.get("bonus").and_then(|bonus| bonus.get("bonus_game_type")).and_then(|v| v.as_i64()).map(|n| n - 1).unwrap_or(0);
                         if context.get("bonus").and_then(|spins| spins.get("selected_mode")).and_then(|v| v.as_str()) == Some("1") {
-                            l_category = &mut a_categories.buy_category[0][category_num as usize];
+                            l_category = &mut a_game.buy_category[0][category_num as usize];
                         } else if context.get("bonus").and_then(|spins| spins.get("selected_mode")).and_then(|v| v.as_str()) == Some("2") {
-                            l_category = &mut a_categories.buy_category[1][category_num as usize];
-                        } else {l_category = &mut a_categories.category[category_num as usize];} 
+                            l_category = &mut a_game.buy_category[1][category_num as usize];
+                        } else {l_category = &mut a_game.category[category_num as usize];} 
                         
                         {
                             //pars
@@ -486,12 +489,13 @@ pub fn extract(a_transactions: &Vec<Value>, a_game: &mut Game, a_spins_symbols: 
                                 }
                             }
                         }
+                        */
                     }
                 }
-            }
-        } else if transaction.get("out").and_then(|response| response.get("command")).and_then(|command| command.as_str()) == Some("start") {
-            if transaction.get("out").and_then(|response| response.get("status")).and_then(|status| status.get("code")).and_then(|code| code.as_str()) == Some("OK") {
-                if let Some(settings) = transaction.get("out").and_then(|response| response.get("settings")) {a_game.settings = settings.clone();}
+            } else if transaction.get("out").and_then(|response| response.get("command")).and_then(|command| command.as_str()) == Some("start") {
+                if transaction.get("out").and_then(|response| response.get("status")).and_then(|status| status.get("code")).and_then(|code| code.as_str()) == Some("OK") {
+                    if let Some(settings) = transaction.get("out").and_then(|response| response.get("settings")) {a_game.settings = settings.clone();}
+                }
             }
         }
         pb_main.inc(1);
