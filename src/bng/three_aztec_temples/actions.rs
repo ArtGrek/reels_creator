@@ -6,10 +6,11 @@ use ordered_float::NotNan;
 use indicatif::{ProgressBar, ProgressStyle};
 use crate::bng::three_aztec_temples::models::{Game, Mode, Spins, Bet, Win, ByLine, BySymbol, ByLenght, Boards, UniqueBoardsInstanse, BoardsInstanse, Board, Bonus, ByMechanic, ByBonusLenght, Symbol, Col, Row, Reel, ReelInstanse, Multi};
 
-pub fn extract(a_transactions: &Vec<Value>, a_spins_symbols: &Vec<i64>, a_appearing_symbols: &Vec<i64>, a_bonus_symbols: &Vec<i64>, a_bonus_symbol_values: &Vec<Multi>, a_mysterty_symbol: i64, a_buy_count: i64, width: usize, height: usize, a_game: &mut Game) {
+pub fn extract(a_transactions: &Vec<Value>, a_game: &mut Game, a_spins_symbols: &Vec<i64>, a_appearing_symbols: &Vec<i64>, a_bonus_symbols: &Vec<i64>, a_bonus_symbol_values: &Vec<Multi>, a_mysterty_symbol: i64, a_buy_count: i64, width: usize, height: usize, ) {
     let pb_main = ProgressBar::new((a_transactions.len()) as u64);
     pb_main.set_prefix("Extracting data from transactions: "); 
     pb_main.set_style(ProgressStyle::default_bar().template("{prefix} [{bar:100.cyan/blue}] {pos}/{len} {msg}").expect("ProgressBar template error"),);
+
     let mut current_bs_count: usize = 0;
     let mut current_bonus_mechanic: Vec<i64> = Vec::new();
     let combo_symbols = set_default_combo_symbols(&a_appearing_symbols);
@@ -21,10 +22,7 @@ pub fn extract(a_transactions: &Vec<Value>, a_spins_symbols: &Vec<i64>, a_appear
     for transaction in a_transactions {
         if transaction.get("out").and_then(|response| response.get("command")).and_then(|command| command.as_str()) == Some("play") {
             if transaction.get("out").and_then(|response| response.get("status")).and_then(|status| status.get("code")).and_then(|code| code.as_str()) == Some("OK") {
-                
-                a_categories.count += 1;
                 if let Some(context) = transaction.get("out").and_then(|response| response.get("context")) {
-                    let category_num = context.get("bonus").and_then(|bonus| bonus.get("bonus_game_type")).and_then(|v| v.as_i64()).map(|n| n - 1).unwrap_or(0);
                     
                     if a_categories.category.len() < (category_num+1) as usize {
                         let mut default_boards: Vec<BoardsInstanse> = vec![];
@@ -181,6 +179,7 @@ pub fn extract(a_transactions: &Vec<Value>, a_spins_symbols: &Vec<i64>, a_appear
                     }
                     //bonus
                     else if context.get("current").and_then(|v| v.as_str()) == Some("bonus") {
+                        let category_num = context.get("bonus").and_then(|bonus| bonus.get("bonus_game_type")).and_then(|v| v.as_i64()).map(|n| n - 1).unwrap_or(0);
                         if context.get("bonus").and_then(|spins| spins.get("selected_mode")).and_then(|v| v.as_str()) == Some("1") {
                             l_category = &mut a_categories.buy_category[0][category_num as usize];
                         } else if context.get("bonus").and_then(|spins| spins.get("selected_mode")).and_then(|v| v.as_str()) == Some("2") {
@@ -492,7 +491,7 @@ pub fn extract(a_transactions: &Vec<Value>, a_spins_symbols: &Vec<i64>, a_appear
             }
         } else if transaction.get("out").and_then(|response| response.get("command")).and_then(|command| command.as_str()) == Some("start") {
             if transaction.get("out").and_then(|response| response.get("status")).and_then(|status| status.get("code")).and_then(|code| code.as_str()) == Some("OK") {
-                if let Some(settings) = transaction.get("out").and_then(|response| response.get("settings")) {a_categories.settings = settings.clone();}
+                if let Some(settings) = transaction.get("out").and_then(|response| response.get("settings")) {a_game.settings = settings.clone();}
             }
         }
         pb_main.inc(1);

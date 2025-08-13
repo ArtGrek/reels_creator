@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde::ser::{SerializeMap, Serializer};
+use serde_json::Value;
 use ordered_float::NotNan;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -131,6 +132,7 @@ pub struct Game {
     pub base: Mode,
     pub buy_1: Mode,
     pub buy_2: Mode,
+    pub settings: Value,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
