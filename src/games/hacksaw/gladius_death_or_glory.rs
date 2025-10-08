@@ -1,7 +1,7 @@
 use serde_json::Value;
 use crate::storage::{load_transactions, save_content, };
 
-pub fn extract_base_reels() {
+pub fn extract_base_coins() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
     let mut combos = vec![[0usize; 1 << 5]; 5];
@@ -34,7 +34,7 @@ pub fn extract_base_reels() {
         }
     }
     println!("total grids count: {}", grids_count);
-    let reels = combos.iter().map(|combo| {
+    let coins = combos.iter().map(|combo| {
         let mut posibility = 0;
         let col = (0..(1usize << 5)).map(|m|  {
             let pattern = (0..5).map(|b| {if (m >> b) & 1 == 1 { "\"@\"" } else { "\"O\"" }}).collect::<Vec<&str>>().join(",");
@@ -45,7 +45,7 @@ pub fn extract_base_reels() {
         }).collect::<Vec<String>>().join(",\n");
         format!("\t\t{{\n{}\n\t\t}}", col)
     }).collect::<Vec<_>>().join(",\n");
-    save_content("../data/gladius_death_or_glory/reels/base_reels.json".to_string(), format!("[\n\t[\n{}\n\t]\n]", reels));
+    save_content("../data/gladius_death_or_glory/reels/base_coins.json".to_string(), format!("[\n\t[\n{}\n\t]\n]", coins));
 }
 
 
@@ -102,6 +102,158 @@ pub fn extract_base_coin_values() {
     }).collect::<Vec<_>>().join(",\n");
     save_content("../data/gladius_death_or_glory/reels/base_coin_values.json".to_string(), format!("{{\n{}\n}}", coin_values));
 }
+
+
+pub fn extract_base_bonus() {
+    let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
+    let mut grids_count = 0usize;
+    let mut count = 0usize; 
+    for tx in &transactions {
+        if let Some(events) = tx["out"]["round"]["events"].as_array() {
+            for ev in events {
+                if let Some(etn) = ev["etn"].as_str() {
+                    if etn == "reveal" {
+                        if let Some(grid) = ev["c"]["grid"].as_str() {
+                            grids_count += 1;
+                            let chars: Vec<char> = grid.chars().skip(2).collect();
+
+                            for ch in chars {
+                                match ch {
+                                    '3' => count += 1, // P
+                                    _ => {}
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("total grids count: {}", grids_count);
+    println!("total bonus count: {}", count);
+    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 100.0) as i64 ;
+    save_content("../data/gladius_death_or_glory/reels/base_bonus.json".to_string(), format!("\"bunus\":{{\n\t\"{}\":\"P\"\n}}", posibility));
+}
+
+
+pub fn extract_base_collector() {
+    let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
+    let mut grids_count = 0usize;
+    let mut count = 0usize; 
+    for tx in &transactions {
+        if let Some(events) = tx["out"]["round"]["events"].as_array() {
+            for ev in events {
+                if let Some(etn) = ev["etn"].as_str() {
+                    if etn.starts_with("coin_reveal_") {
+                        if let Some(grid) = ev["c"]["grid"].as_str() {
+                            grids_count += 1;
+                            let chars: Vec<char> = grid.chars().skip(2).collect();
+
+                            for ch in chars {
+                                match ch {
+                                    ')' => count += 1, // E
+                                    _ => {}
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("total grids count: {}", grids_count);
+    println!("total collector count: {}", count);
+    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 100.0) as i64 ;
+    save_content("../data/gladius_death_or_glory/reels/base_collector.json".to_string(), format!("\"collector\":{{\n\t\"{}\":\"P\"\n}}", posibility));
+}
+
+
+pub fn extract_base_multyplier() {
+    let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
+    let mut grids_count = 0usize;
+
+    let mut count = 0usize; 
+
+    for tx in &transactions {
+        if let Some(events) = tx["out"]["round"]["events"].as_array() {
+            for ev in events {
+                if let Some(etn) = ev["etn"].as_str() {
+                    if etn.starts_with("coin_reveal_") {
+                        if let Some(grid) = ev["c"]["grid"].as_str() {
+                            grids_count += 1;
+                            let chars: Vec<char> = grid.chars().skip(2).collect();
+
+                            for ch in chars {
+                                match ch {
+                                    '+' | ',' | '-' | '.' | '/'| '0' => count += 1, // U V W X Y Z
+                                    _ => {}
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("total grids count: {}", grids_count);
+    println!("total multyplier count: {}", count);
+    
+    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 100.0) as i64 ;
+    save_content("../data/gladius_death_or_glory/reels/base_multyplier.json".to_string(), format!("\"multyplier\":{{\n\t\"{}\":\"P\"\n}}", posibility));
+}
+
+
+pub fn extract_base_multyplier_values() {
+    let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
+    let mut grids_count = 0usize;
+
+    let mut counts = [0usize; 12]; 
+    let equiv = ['U','V','W','X','Y','Z'];
+
+    for tx in &transactions {
+        if let Some(events) = tx["out"]["round"]["events"].as_array() {
+            for ev in events {
+                if let Some(etn) = ev["etn"].as_str() {
+                    if etn.starts_with("coin_reveal_") {
+                        if let Some(grid) = ev["c"]["grid"].as_str() {
+                            grids_count += 1;
+                            let chars: Vec<char> = grid.chars().skip(2).collect();
+
+                            for ch in chars {
+                                match ch {
+                                    '+' => counts[0] += 1, // U
+                                    ',' => counts[1] += 1, // V
+                                    '-' => counts[2] += 1, // W
+                                    '.' => counts[3] += 1, // X
+                                    '/' => counts[4] += 1, // Y
+                                    '0' => counts[5] += 1, // Z
+                                    _ => {}
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("total grids count: {}", grids_count);
+    let coins_count: usize = counts.iter().sum();
+    println!("total multyplier count: {}", coins_count);
+    
+    let mut posibility = 0;
+    let coin_values = (0..equiv.len()).map(|i| {
+        if counts[i] > 0 {
+            posibility += counts[i];
+            format!("\t\"{}\": \"{}\"", posibility, equiv[i])
+        } else {format!("\t\"{}\": \"{}\"", counts[i], equiv[i])}
+    }).collect::<Vec<_>>().join(",\n");
+    save_content("../data/gladius_death_or_glory/reels/base_multyplier_values.json".to_string(), format!("{{\n{}\n}}", coin_values));
+}
+
 
 fn _convert_symbol_to_letter(symbol: char) -> char {
     match symbol {
