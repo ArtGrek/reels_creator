@@ -1,7 +1,7 @@
 use serde_json::Value;
 use crate::storage::{load_transactions, save_content, };
 
-pub fn extract_base_coins() {
+pub fn extract_spin_coins() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
     let mut combos = vec![[0usize; 1 << 5]; 5];
@@ -36,20 +36,21 @@ pub fn extract_base_coins() {
     println!("total grids count: {}", grids_count);
     let coins = combos.iter().map(|combo| {
         let mut posibility = 0;
-        let col = (0..(1usize << 5)).map(|m|  {
+        let col = (0..(1usize << 5)).rev().map(|m|  {
             let pattern = (0..5).map(|b| {if (m >> b) & 1 == 1 { "\"@\"" } else { "\"O\"" }}).collect::<Vec<&str>>().join(",");
             if combo[m] > 0 {
-                posibility += combo[m];
+                //posibility += combo[m];
+                posibility += (combo[m] as f64 * 100.0 / grids_count as f64 * 10000.0) as i64 ;
                 format!("\t\t\t\"{}\": [{}]", posibility, pattern)
             } else {format!("\t\t\t\"{}\": [{}]", combo[m], pattern)}
         }).collect::<Vec<String>>().join(",\n");
         format!("\t\t{{\n{}\n\t\t}}", col)
     }).collect::<Vec<_>>().join(",\n");
-    save_content("../data/gladius_death_or_glory/reels/base_coins.json".to_string(), format!("[\n\t[\n{}\n\t]\n]", coins));
+    save_content("../data/gladius_death_or_glory/reels/spin_coins.json".to_string(), format!("\"reels\":[\n\t[\n{}\n\t]\n]", coins));
 }
 
 
-pub fn extract_base_coin_values() {
+pub fn extract_spin_coin_values() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
 
@@ -96,15 +97,16 @@ pub fn extract_base_coin_values() {
     let mut posibility = 0;
     let coin_values = (0..equiv.len()).map(|i| {
         if counts[i] > 0 {
-            posibility += counts[i];
+            //posibility += counts[i];
+            posibility += (counts[i] as f64 * 100.0 / coins_count as f64 * 10000.0) as i64 ;
             format!("\t\"{}\": \"{}\"", posibility, equiv[i])
         } else {format!("\t\"{}\": \"{}\"", counts[i], equiv[i])}
     }).collect::<Vec<_>>().join(",\n");
-    save_content("../data/gladius_death_or_glory/reels/base_coin_values.json".to_string(), format!("{{\n{}\n}}", coin_values));
+    save_content("../data/gladius_death_or_glory/reels/spin_coin_values.json".to_string(), format!("\"coin_values\":{{\n{}\n}}", coin_values));
 }
 
 
-pub fn extract_base_bonus() {
+pub fn extract_spin_bonus() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
     let mut count = 0usize; 
@@ -132,12 +134,12 @@ pub fn extract_base_bonus() {
     }
     println!("total grids count: {}", grids_count);
     println!("total bonus count: {}", count);
-    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 100.0) as i64 ;
-    save_content("../data/gladius_death_or_glory/reels/base_bonus.json".to_string(), format!("\"bunus\":{{\n\t\"{}\":\"P\"\n}}", posibility));
+    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 10000.0) as i64 ;
+    save_content("../data/gladius_death_or_glory/reels/spin_bonus.json".to_string(), format!("\"bunus\":{{\n\t\"{}\":\"P\"\n}}", posibility));
 }
 
 
-pub fn extract_base_collector() {
+pub fn extract_spin_collector() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
     let mut count = 0usize; 
@@ -165,48 +167,12 @@ pub fn extract_base_collector() {
     }
     println!("total grids count: {}", grids_count);
     println!("total collector count: {}", count);
-    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 100.0) as i64 ;
-    save_content("../data/gladius_death_or_glory/reels/base_collector.json".to_string(), format!("\"collector\":{{\n\t\"{}\":\"P\"\n}}", posibility));
+    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 10000.0) as i64 ;
+    save_content("../data/gladius_death_or_glory/reels/spin_collector.json".to_string(), format!("\"collector\":{{\n\t\"{}\":\"P\"\n}}", posibility));
 }
 
 
-pub fn extract_base_multyplier() {
-    let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
-    let mut grids_count = 0usize;
-
-    let mut count = 0usize; 
-
-    for tx in &transactions {
-        if let Some(events) = tx["out"]["round"]["events"].as_array() {
-            for ev in events {
-                if let Some(etn) = ev["etn"].as_str() {
-                    if etn.starts_with("coin_reveal_") {
-                        if let Some(grid) = ev["c"]["grid"].as_str() {
-                            grids_count += 1;
-                            let chars: Vec<char> = grid.chars().skip(2).collect();
-
-                            for ch in chars {
-                                match ch {
-                                    '+' | ',' | '-' | '.' | '/'| '0' => count += 1, // U V W X Y Z
-                                    _ => {}
-                                }
-                            }
-
-                        }
-                    }
-                }
-            }
-        }
-    }
-    println!("total grids count: {}", grids_count);
-    println!("total multyplier count: {}", count);
-    
-    let posibility = (count as f64 * 100.0 / grids_count as f64 / 15.0 * 100.0) as i64 ;
-    save_content("../data/gladius_death_or_glory/reels/base_multyplier.json".to_string(), format!("\"multyplier\":{{\n\t\"{}\":\"P\"\n}}", posibility));
-}
-
-
-pub fn extract_base_multyplier_values() {
+pub fn extract_spin_multypliers() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
 
@@ -247,11 +213,12 @@ pub fn extract_base_multyplier_values() {
     let mut posibility = 0;
     let coin_values = (0..equiv.len()).map(|i| {
         if counts[i] > 0 {
-            posibility += counts[i];
+            //posibility += counts[i];
+            posibility += (counts[i] as f64 * 100.0 / grids_count as f64 * 10000.0) as i64 ;
             format!("\t\"{}\": \"{}\"", posibility, equiv[i])
         } else {format!("\t\"{}\": \"{}\"", counts[i], equiv[i])}
     }).collect::<Vec<_>>().join(",\n");
-    save_content("../data/gladius_death_or_glory/reels/base_multyplier_values.json".to_string(), format!("{{\n{}\n}}", coin_values));
+    save_content("../data/gladius_death_or_glory/reels/spin_multypliers.json".to_string(), format!("\"multyplier\":{{\n{}\n}}", coin_values));
 }
 
 
