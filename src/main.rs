@@ -11,4 +11,5 @@ mod tests_gladius_death_or_glory {
     #[test]fn test_extract_spin_bonus() {gladius_death_or_glory::extract_spin_bonus();}
     #[test]fn test_extract_spin_collector() {gladius_death_or_glory::extract_spin_collector();}
     #[test]fn test_extract_spin_multypliers() {gladius_death_or_glory::extract_spin_multypliers();}
+    #[test]fn test_extract_spin_coin_cell() {gladius_death_or_glory::extract_spin_coin_cell();}
 }
