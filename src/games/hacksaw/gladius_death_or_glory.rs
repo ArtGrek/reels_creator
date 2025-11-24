@@ -131,6 +131,72 @@ pub fn extract_spin_coin_values() {
 }
 
 
+pub fn _extract_spin_coin_values() {
+    let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
+    let mut grids_count = 0usize;
+
+    let mut counts = [0usize; 19]; 
+    let equiv = ['K','L','M','N','G','H','I','J','Q','R','S','T','E','U','V','W','X','Y','Z'];
+
+    for tx in &transactions {
+        if let Some(events) = tx["out"]["round"]["events"].as_array() {
+            let mut fined_symbols = Vec::new();
+            for ev in events {
+                if let Some(etn) = ev["etn"].as_str() {
+                    if etn.starts_with("coin_reveal_") {
+                        if let Some(grid) = ev["c"]["grid"].as_str() {
+                            grids_count += 1;
+                            let chars: Vec<char> = grid.chars().skip(2).collect();
+                            for (i,ch) in chars.iter().enumerate() {
+                                if !fined_symbols.contains(&i) {
+                                    match ch {
+                                        '=' => {fined_symbols.push(i); counts[0] += 1}, // K
+                                        '>' => {fined_symbols.push(i); counts[1] += 1}, // L
+                                        '?' => {fined_symbols.push(i); counts[2] += 1}, // M
+                                        '@' => {fined_symbols.push(i); counts[3] += 1}, // N
+                                        'G' => {fined_symbols.push(i); counts[4] += 1}, // G
+                                        'H' => {fined_symbols.push(i); counts[5] += 1}, // H
+                                        'I' => {fined_symbols.push(i); counts[6] += 1}, // I
+                                        'J' => {fined_symbols.push(i); counts[7] += 1}, // J
+                                        'Q' => {fined_symbols.push(i); counts[8] += 1}, // Q
+                                        'R' => {fined_symbols.push(i); counts[9] += 1}, // R
+                                        'S' => {fined_symbols.push(i); counts[10] += 1}, // S
+                                        'T' => {fined_symbols.push(i); counts[11] += 1}, // T
+                                        
+                                        ')' => {fined_symbols.push(i); counts[12] += 1}, // E
+                                        
+                                        '+' => {fined_symbols.push(i); counts[13] += 1}, // U
+                                        ',' => {fined_symbols.push(i); counts[14] += 1}, // V
+                                        '-' => {fined_symbols.push(i); counts[15] += 1}, // W
+                                        '.' => {fined_symbols.push(i); counts[16] += 1}, // X
+                                        '/' => {fined_symbols.push(i); counts[17] += 1}, // Y
+                                        '0' => {fined_symbols.push(i); counts[18] += 1}, // Z
+                                        _ => {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!("total grids count: {}", grids_count);
+    let coins_count: usize = counts.iter().sum();
+    println!("total coins count: {}", coins_count);
+    
+    let mut posibility = 0;
+    let coin_values = (0..equiv.len()).map(|i| {
+        if counts[i] > 0 {
+            //posibility += counts[i];
+            posibility += (counts[i] as f64 * 100.0 / coins_count as f64 * 10000.0) as i64 ;
+            format!("\t\t\"{}\": \"{}\"", posibility, equiv[i])
+        } else {format!("\t\t\"{}\": \"{}\"", counts[i], equiv[i])}
+    }).collect::<Vec<_>>().join(",\n");
+    save_content("../data/gladius_death_or_glory/reels/spin_coin_values.json".to_string(), format!("{{\n\t\"coin_values\":{{\n{}\n\t}}\n}}", coin_values));
+}
+
+
 pub fn extract_spin_bonus() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
@@ -347,8 +413,8 @@ pub fn extract_fs_spin_coin_values() {
     let transactions: Vec<Value> =load_transactions("../data/gladius_death_or_glory/transactions/spin/".to_string());
     let mut grids_count = 0usize;
 
-    let mut counts = [0usize; 12]; 
-    let equiv = ['K','L','M','N','G','H','I','J','Q','R','S','T'];
+    let mut counts = [0usize; 19]; 
+    let equiv = ['K','L','M','N','G','H','I','J','Q','R','S','T','E','U','V','W','X','Y','Z'];
 
     for tx in &transactions {
         if let Some(events) = tx["out"]["round"]["events"].as_array() {
@@ -374,6 +440,15 @@ pub fn extract_fs_spin_coin_values() {
                                         'R' => {fined_symbols.push(i); counts[9] += 1}, // R
                                         'S' => {fined_symbols.push(i); counts[10] += 1}, // S
                                         'T' => {fined_symbols.push(i); counts[11] += 1}, // T
+                                        
+                                        ')' => {fined_symbols.push(i); counts[12] += 1}, // E
+                                        
+                                        '+' => {fined_symbols.push(i); counts[13] += 1}, // U
+                                        ',' => {fined_symbols.push(i); counts[14] += 1}, // V
+                                        '-' => {fined_symbols.push(i); counts[15] += 1}, // W
+                                        '.' => {fined_symbols.push(i); counts[16] += 1}, // X
+                                        '/' => {fined_symbols.push(i); counts[17] += 1}, // Y
+                                        '0' => {fined_symbols.push(i); counts[18] += 1}, // Z
                                         _ => {}
                                     }
                                 }
