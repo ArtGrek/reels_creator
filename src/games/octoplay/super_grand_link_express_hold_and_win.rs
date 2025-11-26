@@ -36,7 +36,10 @@ pub fn extract_spin_combos() {
                 col_count += *count;
                 format!("\t\t\t\t\"{}\": [{}]", 
                     (col_count as f64 * 100.0 / total_col_count as f64 * 10000.0) as i64, 
-                    combo.iter().map(|n| {n.to_string()}).collect::<Vec<_>>().join(",")
+                    combo.iter().map(|n| {
+                        let c = (b'A' + (*n as u8 - 1)) as char;
+                        format!("\"{}\"", c)
+                    }).collect::<Vec<_>>().join(",")
                 )
             }).collect::<Vec<String>>().join(",\n")
         )
