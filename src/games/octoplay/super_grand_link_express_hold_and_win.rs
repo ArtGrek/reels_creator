@@ -219,7 +219,7 @@ pub fn extract_respin_reels() {
         let counts = &cells_counts[&(x, y)];
         let s = (10..=16).map(|sym| {
             let count = counts.get(&sym).cloned().unwrap_or(0);
-            let n = (count as f64 * 100.0 / total_count as f64 * 10000.0) as usize;
+            let n = (count as f64 * 100.0 / total_count as f64 * 1000.0) as usize;
             let c = (b'A' + (sym as u8 - 1)) as char;
             c.to_string().repeat(n)
         }).collect::<String>();
