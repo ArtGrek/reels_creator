@@ -6,8 +6,8 @@ use std::collections::HashMap;
 pub fn extract_spin_combos() {
     let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
     let mut combos: Vec<HashMap<Vec<i64>, u64>> = Vec::new();
-    for tr in &transactions {
-        if let Some(reels) = tr["out"]["result"]["game"]["spins"][0]["spinData"]["reels"].as_array() {
+    for transaction in &transactions {
+        if let Some(reels) = transaction["out"]["result"]["game"]["spins"][0]["spinData"]["reels"].as_array() {
             for (col_idx, col_val) in reels.iter().enumerate() {
                 if let Some(col_arr) = col_val.as_array() {
                     let mut col_vec: Vec<i64> = Vec::with_capacity(3);
@@ -127,5 +127,77 @@ pub fn extract_spin_over_bonus() {
         k0 as i64, k5 as i64, k6 as i64, k7 as i64, k8 as i64, k9 as i64, k10 as i64, k11 as i64, k12 as i64, k13 as i64, k14 as i64, k15 as i64
     );
     save_content("../data/hold_and_win/reels/spin_over_bonus.json".to_string(), format!("{{\n{}\n}}", dist_over),);
+}
+
+pub fn extract_spin_coin_values() {
+    let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
+    let mut total_tiles: u64 = 0;
+    let mut multiplier_counts: HashMap<i64, u64> = HashMap::new();
+    for transaction in &transactions {
+        if let Some(cash_tiles) = transaction["out"]["result"]["game"]["spins"][0]["spinData"]["cashTiles"].as_array() {
+            total_tiles += cash_tiles.len() as u64;
+            for tile in cash_tiles {
+                if tile["tileId"].as_i64() == Some(11) {
+                    if let Some(multiplier_from) = tile["features"]["multiplier"]["from"].as_i64() {
+                        *multiplier_counts.entry(multiplier_from).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    let mut dist_coin: Vec<(i64, u64)> = multiplier_counts.iter()
+        .map(|(&mult, &count)| (mult, count))
+        .collect();
+    dist_coin.sort_by_key(|&(mult, _)| mult);
+    let mut accumulated: u64 = 0;
+    let dist_coin_str = dist_coin.iter().map(|(mult, count)| {
+        let key = (( *count as f64 * 100.0 / total_tiles as f64) * 10000.0) as u64;
+        accumulated += key;
+        format!("\t\t\"{}\": {}", accumulated, mult)
+    }).collect::<Vec<_>>().join(",\n");
+    let spin_coin_values = format!("\t\"distCoin\": {{\n{}\n\t}}", dist_coin_str);
+
+    save_content("../data/hold_and_win/reels/spin_coin_values.json".to_string(), format!("{{\n{}\n}}", spin_coin_values),);
+}
+
+pub fn extract_respin_coin_values() {
+    let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
+    let mut total_tiles: u64 = 0;
+    let mut multiplier_counts: HashMap<i64, u64> = HashMap::new();
+    for transaction in &transactions {
+        if let Some(spins) = transaction["out"]["result"]["game"]["spins"].as_array() {
+            for spin in spins.iter().skip(1) {
+                if let Some(cash_tiles) = spin["spinData"]["cashTiles"].as_array() {
+                    total_tiles += cash_tiles.len() as u64;
+                    for tile in cash_tiles {
+                        if tile["tileId"].as_i64() == Some(11) {
+                            if let Some(multiplier_from) = tile["features"]["multiplier"]["from"].as_i64() {
+                                *multiplier_counts.entry(multiplier_from).or_insert(0) += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    let mut dist_coin: Vec<(i64, u64)> = multiplier_counts.iter()
+        .map(|(&mult, &count)| (mult, count))
+        .collect();
+    dist_coin.sort_by_key(|&(mult, _)| mult);
+    let mut accumulated: u64 = 0;
+    let dist_coin_str = dist_coin.iter().map(|(mult, count)| {
+        let key = (( *count as f64 * 100.0 / total_tiles as f64) * 10000.0) as u64;
+        accumulated += key;
+        format!("\t\t\"{}\": {}", accumulated, mult)
+    }).collect::<Vec<_>>().join(",\n");
+    let respin_coin_values = format!("\t\"distCoin\": {{\n{}\n\t}}", dist_coin_str);
+
+    save_content("../data/hold_and_win/reels/respin_coin_values.json".to_string(), format!("{{\n{}\n}}", respin_coin_values),);
 }
 
