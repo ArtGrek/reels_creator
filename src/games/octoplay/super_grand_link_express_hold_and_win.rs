@@ -5,7 +5,9 @@ use std::collections::HashMap;
 
 pub fn extract_spin_combos() {
     let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
+
     let mut combos: Vec<HashMap<Vec<i64>, u64>> = Vec::new();
+
     for transaction in &transactions {
         if let Some(reels) = transaction["out"]["result"]["game"]["spins"][0]["spinData"]["reels"].as_array() {
             for (col_idx, col_val) in reels.iter().enumerate() {
@@ -25,6 +27,7 @@ pub fn extract_spin_combos() {
             }
         }
     }
+
     let spin_combos = combos.iter_mut().map(|col| {
         let total_col_count: u64 = col.values().sum();
         let mut col_count = 0;
@@ -43,6 +46,7 @@ pub fn extract_spin_combos() {
             }).collect::<Vec<String>>().join(",\n")
         )
     }).collect::<Vec<String>>().join(",\n");
+
     save_content("../data/hold_and_win/reels/spin_combos.json".to_string(), format!("{{\n\t\"reels\":[\n\t\t[\n{}\n\t\t]\n\t]\n}}", spin_combos),);
 }
 
@@ -71,7 +75,7 @@ pub fn extract_spin_over_bonus() {
                     let mut gt_10_count: u64 = 0;
                     for col in reels_payout {
                         if let Some(col_arr) = col.as_array() {
-                            for v in col_arr {
+                            for v in col_arr[3..=5].iter() {
                                 if let Some(n) = v.as_i64() {
                                     if n >= 10 {gt_10_count += 1;}
                                 }
@@ -163,19 +167,84 @@ pub fn extract_spin_coin_values() {
     save_content("../data/hold_and_win/reels/spin_coin_values.json".to_string(), format!("{{\n{}\n}}", spin_coin_values),);
 }
 
+pub fn extract_respin_reels() {
+    let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
+    let mut cells_counts: HashMap<(usize, usize), HashMap<i64, u64>> = HashMap::new();
+    let mut total_count: u64 = 0;
+    for transaction in &transactions {
+        if let Some(spins) = transaction["out"]["result"]["game"]["spins"].as_array() {
+            for spin in spins {
+                if spin["type"] == "freeSpin" {
+                    if let Some(reels) = spin["spinData"]["reels"].as_array() {
+                        total_count += 1;
+                        for (x, col_val) in reels.iter().enumerate() {
+                            if let Some(col_arr) = col_val.as_array() {
+                                if x == 2 { 
+                                    if let Some(reels_payout) = spin["spinData"]["reelsPayout"].as_array() {
+                                        if let Some(col_arr_payout) = reels_payout[2].as_array() {
+                                            if col_arr != col_arr_payout {
+                                                let col: Vec<i64> = col_arr.iter().map(|v| v.as_i64().unwrap()).collect::<Vec<i64>>();
+                                                let col_payout: Vec<i64> = col_arr_payout.iter().map(|v| v.as_i64().unwrap()).collect::<Vec<i64>>();
+                                                for y in 0..col_payout.len() {
+                                                    let map = cells_counts.entry((x, y)).or_insert_with(HashMap::new);
+                                                    if col[y] != col_payout[y] {
+                                                        *map.entry(col_payout[y]).or_insert(0) += 1;
+                                                    } else {
+                                                        *map.entry(16).or_insert(0) += 1;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    continue; 
+                                }
+                                for (y, cell) in col_arr[3..=5].iter().enumerate() {
+                                    if let Some(sym) = cell.as_i64() {
+                                        let map = cells_counts.entry((x, y)).or_insert_with(HashMap::new);
+                                        *map.entry(sym).or_insert(0) += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let mut keys: Vec<(usize, usize)> = cells_counts.keys().cloned().collect();
+    keys.sort_by_key(|&(x, y)| (x, y));
+
+
+    let respin_reels = keys.iter().map(|&(x, y)| {
+        let counts = &cells_counts[&(x, y)];
+        let s = (10..=16).map(|sym| {
+            let count = counts.get(&sym).cloned().unwrap_or(0);
+            let n = (count as f64 * 100.0 / total_count as f64 * 10000.0) as usize;
+            let c = (b'A' + (sym as u8 - 1)) as char;
+            c.to_string().repeat(n)
+        }).collect::<String>();
+        format!("\t\t\"{}\"", s)
+    }).collect::<Vec<String>>().join(",\n");
+
+
+    save_content("../data/hold_and_win/reels/respin_reels.json".to_string(), format!("{{\n\t\"reels\":[\n{}\n\t]\n}}", respin_reels),);
+}
+
 pub fn extract_respin_coin_values() {
     let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
     let mut total_tiles: u64 = 0;
     let mut multiplier_counts: HashMap<i64, u64> = HashMap::new();
     for transaction in &transactions {
         if let Some(spins) = transaction["out"]["result"]["game"]["spins"].as_array() {
-            for spin in spins.iter().skip(1) {
-                if let Some(cash_tiles) = spin["spinData"]["cashTiles"].as_array() {
-                    total_tiles += cash_tiles.len() as u64;
-                    for tile in cash_tiles {
-                        if tile["tileId"].as_i64() == Some(11) {
-                            if let Some(multiplier_from) = tile["features"]["multiplier"]["from"].as_i64() {
-                                *multiplier_counts.entry(multiplier_from).or_insert(0) += 1;
+            for spin in spins {
+                if spin["type"] == "freeSpin" {
+                    if let Some(cash_tiles) = spin["spinData"]["cashTiles"].as_array() {
+                        total_tiles += cash_tiles.len() as u64;
+                        for tile in cash_tiles {
+                            if tile["tileId"].as_i64() == Some(11) {
+                                if let Some(multiplier_from) = tile["features"]["multiplier"]["from"].as_i64() {
+                                    *multiplier_counts.entry(multiplier_from).or_insert(0) += 1;
+                                }
                             }
                         }
                     }
