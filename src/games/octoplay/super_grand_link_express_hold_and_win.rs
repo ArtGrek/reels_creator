@@ -245,16 +245,12 @@ pub fn extract_respin_coin_values() {
             for spin in spins {
                 if spin["type"] == "freeSpin" {
                     if let Some(cash_tiles) = spin["spinData"]["cashTiles"].as_array() {
-                        let mut have_11 = false;
                         for tile in cash_tiles {
-                            if tile["tileId"].as_i64() == Some(11) {
-                                have_11 = true;
                                 if let Some(multiplier_from) = tile["features"]["multiplier"]["from"].as_i64() {
                                     *multiplier_counts.entry(multiplier_from).or_insert(0) += 1;
                                 }
-                            }
                         }
-                        if have_11 {total_tiles += cash_tiles.len() as u64;}
+                        total_tiles += cash_tiles.len() as u64;
                     }
                 }
             }
@@ -276,3 +272,37 @@ pub fn extract_respin_coin_values() {
     save_content("../data/hold_and_win/reels/respin_coin_values.json".to_string(), format!("{{\n{}\n}}", respin_coin_values),);
 }
 
+pub fn extract_spin_hit() {
+    let transactions: Vec<Value> = load_transactions("../data/hold_and_win/transactions/".to_string());
+    let mut total_count: u64 = 0;
+    let mut win_count: u64 = 0;
+    let mut respins_triger_count: u64 = 0;
+    let mut respins_count: u64 = 0;
+    for transaction in &transactions {
+        total_count += 1;   
+        if transaction["out"]["result"]["game"]["win"]["spin"].as_str().unwrap_or("0").parse::<f64>().unwrap_or(0.0) > 0.0 {
+            win_count += 1;
+            
+        }
+        let spin = &transaction["out"]["result"]["game"]["spins"][0]["spinData"];
+        if spin.get("activator").is_some() {
+            respins_triger_count += 1;
+            if let Some(free_spins) = transaction["out"]["result"]["game"]["spins"].as_array() {
+                for spin in free_spins {
+                    if spin["type"] == "freeSpin" {
+                        respins_count += 1;
+                    }
+                }
+
+            }
+        }
+    }
+
+    let spin_hit = format!("\t\"hit_frequency\":{},\n\t\"respin_triger_ration\":{},\n\t\"respin_ration\":{}", 
+        win_count as f64 * 100.0 / total_count as f64, 
+        respins_triger_count as f64 * 100.0 / total_count as f64, 
+        respins_count as f64 * 100.0 / total_count as f64
+    );
+
+    save_content("../data/hold_and_win/reels/spin_hit.json".to_string(), format!("{{\n{}\n}}", spin_hit),);
+}
