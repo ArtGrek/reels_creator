@@ -140,7 +140,7 @@ pub fn extract_spin_coin_values() {
     for transaction in &transactions {
         if let Some(spins) = transaction["out"]["result"]["game"]["spins"].as_array() {
             for spin in spins {
-                if spin["type"] == "freeSpin" {
+                if spin["type"] == "spin" {
                     if let Some(cash_tiles) = spin["spinData"]["cashTiles"].as_array() {
                         let mut have_11 = false;
                         for tile in cash_tiles {
@@ -160,15 +160,13 @@ pub fn extract_spin_coin_values() {
 
 
 
-    let mut dist_coin: Vec<(i64, u64)> = multiplier_counts.iter()
-        .map(|(&mult, &count)| (mult, count))
-        .collect();
+    let mut dist_coin: Vec<(i64, u64)> = multiplier_counts.iter().map(|(&mult, &count)| (mult, count)).collect();
     dist_coin.sort_by_key(|&(mult, _)| mult);
-    let mut accumulated: u64 = 0;
+    let mut accumulated = 0.0;
     let dist_coin_str = dist_coin.iter().map(|(mult, count)| {
-        let key = (( *count as f64 * 100.0 / total_tiles as f64) * 10000.0) as u64;
+        let key = ( *count as f64 * 100.0 / total_tiles as f64) * 10000.0;
         accumulated += key;
-        format!("\t\t\"{}\": {}", accumulated, mult)
+        format!("\t\t\"{}\": {}", accumulated as u64, mult)
     }).collect::<Vec<_>>().join(",\n");
     let spin_coin_values = format!("\t\"distCoin\": {{\n{}\n\t}}", dist_coin_str);
 
@@ -265,15 +263,13 @@ pub fn extract_respin_coin_values() {
 
 
 
-    let mut dist_coin: Vec<(i64, u64)> = multiplier_counts.iter()
-        .map(|(&mult, &count)| (mult, count))
-        .collect();
+    let mut dist_coin: Vec<(i64, u64)> = multiplier_counts.iter().map(|(&mult, &count)| (mult, count)).collect();
     dist_coin.sort_by_key(|&(mult, _)| mult);
-    let mut accumulated: u64 = 0;
+    let mut accumulated = 0.0;
     let dist_coin_str = dist_coin.iter().map(|(mult, count)| {
-        let key = (( *count as f64 * 100.0 / total_tiles as f64) * 10000.0) as u64;
+        let key = ( *count as f64 * 100.0 / total_tiles as f64) * 10000.0;
         accumulated += key;
-        format!("\t\t\"{}\": {}", accumulated, mult)
+        format!("\t\t\"{}\": {}", accumulated as u64, mult)
     }).collect::<Vec<_>>().join(",\n");
     let respin_coin_values = format!("\t\"distCoin\": {{\n{}\n\t}}", dist_coin_str);
 
