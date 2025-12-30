@@ -142,14 +142,16 @@ pub fn extract_spin_coin_values() {
             for spin in spins {
                 if spin["type"] == "freeSpin" {
                     if let Some(cash_tiles) = spin["spinData"]["cashTiles"].as_array() {
-                        total_tiles += cash_tiles.len() as u64;
+                        let mut have_11 = false;
                         for tile in cash_tiles {
                             if tile["tileId"].as_i64() == Some(11) {
+                                have_11 = true;
                                 if let Some(multiplier_from) = tile["features"]["multiplier"]["from"].as_i64() {
                                     *multiplier_counts.entry(multiplier_from).or_insert(0) += 1;
                                 }
                             }
                         }
+                        if have_11 {total_tiles += cash_tiles.len() as u64;}
                     }
                 }
             }
