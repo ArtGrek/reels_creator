@@ -4,7 +4,7 @@ fn main() -> anyhow::Result<()> {Ok(())}
 // HACKSAW
 #[cfg(test)]
 mod tests_gladius_death_or_glory {
-    use reels_creator::games::hacksaw::gladius_death_or_glory;
+    use extractor::games::hacksaw::gladius_death_or_glory;
     
     #[test]fn test_extract_spin_coins() {gladius_death_or_glory::extract_spin_coins();}
     #[test]fn test_extract_spin_coin_cell() {gladius_death_or_glory::extract_spin_coin_cell();}
@@ -23,7 +23,7 @@ mod tests_gladius_death_or_glory {
 //OCTOPLAY
 #[cfg(test)]
 mod tests_super_grand_link_express_hold_and_win {
-    use reels_creator::games::octoplay::super_grand_link_express_hold_and_win;
+    use extractor::games::octoplay::super_grand_link_express_hold_and_win;
     
     #[test]fn test_extract_spin_combos() {super_grand_link_express_hold_and_win::extract_spin_combos();}
     #[test]fn test_extract_spin_over_bonus() {super_grand_link_express_hold_and_win::extract_spin_over_bonus();}
