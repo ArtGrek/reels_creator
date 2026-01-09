@@ -1,6 +1,5 @@
 use serde_json::Value;
 use std::path::Path;
-use std::fs;
 use walkdir::WalkDir;
 use indicatif::{ProgressBar, ProgressStyle, };
 
@@ -31,9 +30,22 @@ pub fn load_transactions (a_location: String, ) -> Vec<Value>{
             pb_main.inc(1);
         }
     } else if Path::new(&transactions_file_path).is_file() {
-        let file_content = fs::read_to_string(transactions_file_path).unwrap_or_default();
+        let mut file_content = match std::fs::read_to_string(&transactions_file_path) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Read error in file {}: {}", transactions_file_path, e);
+                pb_main.finish_with_message(" -> loaded 0 transactions");
+                return vec![];
+            }
+        };
         pb_main.set_position(1);
-        l_transactions = serde_json::from_str(&file_content).unwrap_or_default();
+        if let Some(pos) = file_content.rfind('}') {file_content.truncate(pos + 1);}
+        let data: Vec<Value> = match serde_json::from_str(&("[".to_owned() + &file_content.clone() + "]")) {
+            Ok(v) => v,
+            Err(e) => {println!("JSON parse error in file {}: {}", transactions_file_path, e); vec![]}
+        };
+        let filtered_data: Vec<Value> = data.iter().map(|item| item.clone()).collect();
+        l_transactions.extend(filtered_data);
         pb_main.set_position(2);
     } else {
         println!("Does not exist or is not defined: {}", transactions_file_path);
@@ -44,7 +56,7 @@ pub fn load_transactions (a_location: String, ) -> Vec<Value>{
 
 pub fn save_content (a_location: String, a_content: String, ) {
     let path = a_location;
-    if let Some(parent) = Path::new(&path).parent() {let _ = fs::create_dir_all(parent);}
-    fs::write(path, a_content).unwrap();
+    if let Some(parent) = Path::new(&path).parent() {let _ = std::fs::create_dir_all(parent);}
+    std::fs::write(path, a_content).unwrap();
 }
 
