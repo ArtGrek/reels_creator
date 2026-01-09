@@ -39,12 +39,10 @@ use indicatif::{ProgressBar, ProgressStyle, };
     let mut multi_in_bonus: Vec<Value> = Vec::new();
     let mut find_count = 5;
     for transaction in &transactions {
-        let multi_exist = transaction["out"]["context"]["bonus"]["board"].as_array().map(|board_val| {
-            board_val.iter().any(|board| {
-                board.as_array().map(|col| {
-                    col.iter().any(|sym| {
-                        sym.as_i64() == Some(12)
-                    })
+        let multi_exist = transaction["out"]["context"]["bonus"]["changes"].as_array().map(|changes| {
+            changes.iter().any(|change| {
+                change.as_object().map(|new| {
+                    new["symbol"].as_i64() == Some(12)
                 }).unwrap_or(false)
             })
         }).unwrap_or(false);
