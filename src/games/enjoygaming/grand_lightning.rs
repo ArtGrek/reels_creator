@@ -2,16 +2,19 @@
 use serde_json::Value;
 use crate::storage::{load_transactions, save_content, };
 //use std::collections::HashMap;
+use std::collections::HashSet;
 use indicatif::{ProgressBar, ProgressStyle, };
 
 #[test]fn test_extract_by_filter() {extract_by_filter();} pub fn extract_by_filter() {
-    let mut filtred_transactions: Vec<String> = Vec::new();
     //let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/".to_string());
     let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/bet_100/".to_string());
     //let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/bet_100/d881edc87b9a4faf8a8edd304943f635.json".to_string());
+    let mut filtred_transactions: Vec<String> = Vec::new();
     let pb_main = ProgressBar::new((transactions.len()) as u64);
     pb_main.set_prefix("Find transactions wiht conditions: ");
     pb_main.set_style(ProgressStyle::default_bar().template("{prefix} [{bar:100.cyan/blue}] {pos}/{len} {msg}").expect("ProgressBar template error"),);
+    // start filters
+
     // filter bac_win_and_multi_2_in_spin
     {
         pb_main.set_position(0);
@@ -293,4 +296,68 @@ use indicatif::{ProgressBar, ProgressStyle, };
     pb_main.finish_with_message(" -> finished");
     let result = format!("\t\"filtred_transactions\": {{\n{}\n\t}}", filtred_transactions.iter().map(|transaction| {format!("{transaction}")}).collect::<Vec<String>>().join(",\n"));
     save_content("../data/enjoygaming/grand_lightning/temporary/filtred.json".to_string(), format!("{{\n{}\n}}", result),);
+}
+
+
+#[test]fn test_extract_coin_values() {extract_coin_values();} pub fn extract_coin_values() {
+    let mode = "bet_30000/";
+    let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/".to_owned() + mode);
+    //let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/bet_100/d881edc87b9a4faf8a8edd304943f635.json".to_string());
+    let result: String;
+    let pb_main = ProgressBar::new((transactions.len()) as u64);
+    pb_main.set_prefix("Find transactions wiht conditions: ");
+    pb_main.set_style(ProgressStyle::default_bar().template("{prefix} [{bar:100.cyan/blue}] {pos}/{len} {msg}").expect("ProgressBar template error"),);
+    // start filters
+    
+    // filter coin_values
+    {
+        pb_main.set_position(0);
+        let mut coin_values_set: HashSet<i32> = HashSet::new();
+        for transaction in &transactions {
+            let spins_board = &transaction["out"]["context"]["spins"]["board"];
+
+            // 1) spins.bs_values + spins.board
+            let spins_bs = &transaction["out"]["context"]["spins"]["bs_values"];
+            collect_coin_values_from(spins_bs, spins_board, &mut coin_values_set);
+
+            // 2) bonus.bs_values + bonus.board (если есть), иначе используем spins.board
+            let bonus_bs = &transaction["out"]["context"]["bonus"]["bs_values"];
+            let bonus_board = &transaction["out"]["context"]["bonus"]["board"];
+            if bonus_board.is_array() {
+                collect_coin_values_from(bonus_bs, bonus_board, &mut coin_values_set);
+            } else {
+                collect_coin_values_from(bonus_bs, spins_board, &mut coin_values_set);
+            }
+            pb_main.inc(1);
+        }
+        let mut coin_values: Vec<i32> = coin_values_set.into_iter().collect();
+        coin_values.sort_unstable();
+        result = format!("\t\"coin_values\":[\n{}\n\t]", coin_values.iter().map(|value| {format!("\t\t{value}")}).collect::<Vec<String>>().join(",\n"));
+    }
+    
+    // end filter
+    pb_main.finish_with_message(" -> finished");
+    save_content(format!("../data/enjoygaming/grand_lightning/settings/{mode}coin_values.json"), format!("{{\n{}\n}}", result),);
+}
+
+fn collect_coin_values_from(bs_values: &Value, board: &Value, out: &mut HashSet<i32>) {
+    let bs_cols = match bs_values.as_array() { Some(v) => v, None => return };
+    let brd_cols = match board.as_array() { Some(v) => v, None => return };
+
+    for (col_i, bs_col_v) in bs_cols.iter().enumerate() {
+        let bs_col = match bs_col_v.as_array() { Some(v) => v, None => continue };
+        let brd_col_v = match brd_cols.get(col_i) { Some(v) => v, None => continue };
+        let brd_col = match brd_col_v.as_array() { Some(v) => v, None => continue };
+
+        for (row_i, bs_cell) in bs_col.iter().enumerate() {
+            let bs = match bs_cell.as_i64() { Some(v) => v, None => continue };
+            if bs == 0 { continue; }
+
+            let brd = brd_col.get(row_i).and_then(|v| v.as_i64()).unwrap_or(12);
+            if brd != 12 {
+                // bs_values у тебя целые, берём i32
+                out.insert(bs as i32);
+            }
+        }
+    }
 }
