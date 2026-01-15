@@ -6,8 +6,8 @@ use std::collections::HashSet;
 use indicatif::{ProgressBar, ProgressStyle, };
 
 #[test]fn test_extract_by_filter() {extract_by_filter();} pub fn extract_by_filter() {
-    //let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/".to_string());
-    let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/bet_100/".to_string());
+    let mode = "bet_7000/";
+    let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/".to_owned() + mode);
     //let transactions: Vec<Value> = load_transactions("../data/enjoygaming/grand_lightning/transactions/bet_100/d881edc87b9a4faf8a8edd304943f635.json".to_string());
     let mut filtred_transactions: Vec<String> = Vec::new();
     let pb_main = ProgressBar::new((transactions.len()) as u64);
@@ -291,11 +291,68 @@ use indicatif::{ProgressBar, ProgressStyle, };
             original_board_in_bonus.iter().map(|transaction| {format!("\t\t\t{transaction}")}).collect::<Vec<String>>().join(",\n")
         ));
     }
+
+    // filter spin_overlay_details
+    {
+        pb_main.set_position(0);
+        let mut find_count = 5;
+        let mut spin_overlay_less: Vec<Value> = Vec::new();
+        let mut spin_exists_min_value: Value = Default::default();
+        let mut spin_exists_max_value: Value = Default::default();
+        let mut spin_overlay_max_value: Value = Default::default();
+        let mut spin_exists_min = 15usize;
+        let mut spin_exists_max = 0usize;
+        let mut spin_overlay_max = 0usize;
+        for transaction in &transactions {
+
+            let is_spin = transaction["in"]["action"]["name"].as_str() == Some("spin");
+            let bac_win = transaction["out"]["context"]["spins"]["bac_win"].as_bool().unwrap_or(false);
+
+            let spetials_overlaied = transaction["out"]["context"]["spins"]["board"].as_array().map(|board| {
+                board.iter()
+                    .flat_map(|col_val| col_val.as_array().into_iter().flatten())
+                    .filter(|symbol| {
+                        matches!(symbol.as_i64(), Some(10 | 11 | 12))
+                    }).count()
+            }).unwrap_or(0);
+
+            let spetials_exist = transaction["out"]["context"]["spins"]["original_board"].as_array().map(|board| {
+                board.iter()
+                    .flat_map(|col_val| col_val.as_array().into_iter().flatten())
+                    .filter(|symbol| {
+                        matches!(symbol.as_i64(), Some(10 | 11 | 12))
+                    }).count()
+            }).unwrap_or(15);
+
+            if bac_win {
+                if spin_exists_min > spetials_exist {spin_exists_min = spetials_exist; spin_exists_min_value = transaction.clone()}
+                if spin_exists_max < spetials_exist {spin_exists_max = spetials_exist; spin_exists_max_value = transaction.clone()}
+                if spin_overlay_max < spetials_overlaied {spin_overlay_max = spetials_overlaied; spin_overlay_max_value = transaction.clone()}
+            }
+
+
+            if spetials_exist < 2 && spetials_overlaied > 5 && is_spin {
+                find_count -= 1;
+                spin_overlay_less.push(transaction.clone());
+                if find_count <= 0 {break};
+            }
+            pb_main.inc(1);
+        }
+        filtred_transactions.push(format!("\t\t\"spin_exists_min\": {},\n\t\t\"spin_exists_min_value\": {},\n\t\t\"spin_exists_max\": {},\n\t\t\"spin_exists_max_value\": {},\n\t\t\"spin_overlay_max\": {},\n\t\t\"spin_overlay_max_value\": {},\n\t\t\"spin_overlay_less\":[\n{}\n\t\t]", 
+            spin_exists_min,
+            spin_exists_min_value,
+            spin_exists_max,
+            spin_exists_max_value,
+            spin_overlay_max,
+            spin_overlay_max_value,
+            spin_overlay_less.iter().map(|transaction| {format!("\t\t\t{transaction}")}).collect::<Vec<String>>().join(",\n")
+        ));
+    }
     
     // end filter
     pb_main.finish_with_message(" -> finished");
     let result = format!("\t\"filtred_transactions\": {{\n{}\n\t}}", filtred_transactions.iter().map(|transaction| {format!("{transaction}")}).collect::<Vec<String>>().join(",\n"));
-    save_content("../data/enjoygaming/grand_lightning/temporary/filtred.json".to_string(), format!("{{\n{}\n}}", result),);
+    save_content(format!("../data/enjoygaming/grand_lightning/temporary/{mode}filtred.json"), format!("{{\n{}\n}}", result),);
 }
 
 
